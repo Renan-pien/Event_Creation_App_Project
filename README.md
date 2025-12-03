@@ -88,7 +88,7 @@ Edite MyApplication.java
 
 Configure o IP local do seu servidor PHP, exemplo:
 
-public static final String BASE_URL = "http://192.168.0.106/syncmeet/";
+public static final String BASE_URL = "http://10.0.0.2/syncmeet/";
 
 3. Executar
 
