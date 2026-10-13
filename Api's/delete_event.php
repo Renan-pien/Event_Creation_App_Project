@@ -1,5 +1,5 @@
 <?php
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 require_once "conexao.php";
 
 // Só aceita POST
@@ -11,10 +11,11 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
-// ID enviado
-$id = $_POST["id"] ?? null;
+// ID do evento e do dono (só exclui se pertencer ao usuário)
+$id         = $_POST["id"] ?? null;
+$usuario_id = $_POST["usuario_id"] ?? null;
 
-if (!$id || !is_numeric($id)) {
+if (!$id || !is_numeric($id) || !$usuario_id || !is_numeric($usuario_id)) {
     echo json_encode([
         "success" => false,
         "message" => "ID inválido ou ausente"
@@ -23,24 +24,23 @@ if (!$id || !is_numeric($id)) {
 }
 
 // Prepara comando seguro
-$sql = "DELETE FROM eventos WHERE id = ?";
+$sql = "DELETE FROM eventos WHERE id = ? AND usuario_id = ?";
 $stmt = $con->prepare($sql);
 
 if (!$stmt) {
     echo json_encode([
         "success" => false,
-        "message" => "Erro no prepare",
-        "erro" => $con->error
+        "message" => "Erro no prepare"
     ]);
     exit;
 }
 
-$stmt->bind_param("i", $id);
+$stmt->bind_param("ii", $id, $usuario_id);
 
 // Execução
 if ($stmt->execute()) {
 
-    // Se não excluiu nenhuma linha -> ID não existe
+    // Se não excluiu nenhuma linha -> ID não existe (ou não é deste usuário)
     if ($stmt->affected_rows === 0) {
         echo json_encode([
             "success" => false,
@@ -57,8 +57,7 @@ if ($stmt->execute()) {
 } else {
     echo json_encode([
         "success" => false,
-        "message" => "Erro ao excluir evento",
-        "erro" => $stmt->error
+        "message" => "Erro ao excluir evento"
     ]);
 }
 

@@ -1,8 +1,5 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
@@ -15,7 +12,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+import com.syncmeet.app.utils.LembreteScheduler;
+import com.syncmeet.app.utils.SessionManager;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,13 +33,16 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
 
     private int idEvento = -1;
 
-    private static final String BASE_URL = "http://10.0.2.2/syncmeet/";
+    private SessionManager session;
+
     private static final String TAG = "EditarEventoDetail";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.editar_evento_detail);
+
+        session = new SessionManager(this);
 
         backArrow = findViewById(R.id.back_arrow);
         nomeEvento = findViewById(R.id.detalhe_nome_evento);
@@ -65,7 +67,8 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
 
     private void carregarDetalhesDoEvento() {
 
-        String url = BASE_URL + "get_event.php?id=" + idEvento;
+        String url = BuildConfig.BASE_URL + "get_event.php?id=" + idEvento
+                + "&usuario_id=" + session.getUserId();
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -103,29 +106,29 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
                 }
         );
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 
     private void atualizarEvento(int idEvento) {
-
-        String nome = nomeEvento.getText().toString().trim();
-        String loc = local.getText().toString().trim();
-        String dat = data.getText().toString().trim();
-        String hor = horario.getText().toString().trim();
+        final String nome = nomeEvento.getText().toString().trim();
+        final String loc = local.getText().toString().trim();
+        final String dat = data.getText().toString().trim();
+        final String hor = horario.getText().toString().trim();
 
         if (nome.isEmpty() || loc.isEmpty() || dat.isEmpty() || hor.isEmpty()) {
             Toast.makeText(this, "Preencha todos os campos", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // 🔥 Validar se nova data/hora está no futuro
+        // Validar se nova data/hora está no futuro
         if (!validarDataHora(dat, hor)) return;
 
-        String url = BASE_URL + "update_event.php";
+        // Lembrete por notificação: no Android 13+ exige permissão em runtime
+        LembreteScheduler.pedirPermissaoNotificacao(this);
 
         StringRequest request = new StringRequest(
                 Request.Method.POST,
-                url,
+                BuildConfig.BASE_URL + "update_event.php",
                 response -> {
                     try {
                         JSONObject obj = new JSONObject(response);
@@ -137,8 +140,8 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
                         if (success) {
 
                             // cancela lembrete antigo e cria o novo
-                            cancelarNotificacao(idEvento);
-                            agendarNotificacao(idEvento, nome, dat, hor);
+                            LembreteScheduler.cancelar(this, idEvento);
+                            LembreteScheduler.agendar(this, idEvento, nome, dat, hor);
 
                             finish();
                         }
@@ -152,6 +155,7 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
                 params.put("id", String.valueOf(idEvento));
+                params.put("usuario_id", String.valueOf(session.getUserId()));
                 params.put("nome", nome);
                 params.put("local", loc);
                 params.put("data", dat);
@@ -160,10 +164,10 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
             }
         };
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 
-    // ✔ Validação forte de data + hora
+    // Validação forte de data + hora
     private boolean validarDataHora(String dataStr, String horaStr) {
 
         try {
@@ -187,63 +191,6 @@ public class EditarEventoDetailActivity extends AppCompatActivity {
         } catch (Exception e) {
             Toast.makeText(this, "Data ou hora inválida!", Toast.LENGTH_SHORT).show();
             return false;
-        }
-    }
-
-    private void cancelarNotificacao(int idEvento) {
-        Intent intent = new Intent(this, EventoLembreteReceiver.class);
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                idEvento,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-        if (alarmManager != null)
-            alarmManager.cancel(pendingIntent);
-    }
-
-    private void agendarNotificacao(int idEvento, String nome, String dataStr, String horaStr) {
-
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-            Calendar cal = Calendar.getInstance();
-
-            cal.setTime(sdf.parse(dataStr));
-
-            String[] h = horaStr.split(":");
-            cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(h[0]));
-            cal.set(Calendar.MINUTE, Integer.parseInt(h[1]));
-            cal.set(Calendar.SECOND, 0);
-
-            // 40 minutos antes
-            long triggerAt = cal.getTimeInMillis() - 40 * 60 * 1000;
-
-            if (triggerAt <= System.currentTimeMillis()) return;
-
-            Intent intent = new Intent(this, EventoLembreteReceiver.class);
-            intent.putExtra(EventoLembreteReceiver.EXTRA_ID, idEvento);
-            intent.putExtra(EventoLembreteReceiver.EXTRA_NOME, nome);
-            intent.putExtra(EventoLembreteReceiver.EXTRA_DATA, dataStr);
-            intent.putExtra(EventoLembreteReceiver.EXTRA_HORA, horaStr);
-
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                    this,
-                    idEvento,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-            );
-
-            AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-            if (alarmManager != null)
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -6,19 +6,19 @@ import androidx.appcompat.widget.Toolbar;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.Toast;
 
 import com.android.volley.Request;
-import com.android.volley.RequestQueue;
+import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-import com.android.volley.Response;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+
+import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,10 +30,6 @@ public class CriarContaActivity extends AppCompatActivity {
     private TextInputLayout emailLayout, usuarioLayout, senhaLayout, confirmarSenhaLayout;
     private TextInputEditText emailEditText, usuarioEditText, senhaEditText, confirmarSenhaEditText;
     private MaterialButton registerButton;
-
-    // URL DO SEU BACKEND PHP
-    private static final String URL = "http://10.0.2.2/syncmeet/register.php";
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,18 +114,32 @@ public class CriarContaActivity extends AppCompatActivity {
 
         StringRequest request = new StringRequest(
                 Request.Method.POST,
-                URL,
+                BuildConfig.BASE_URL + "register.php",
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        Toast.makeText(CriarContaActivity.this, "Cadastro realizado com sucesso!", Toast.LENGTH_LONG).show();
-                        finish(); // Fecha tela após sucesso
+                        try {
+                            JSONObject json = new JSONObject(response);
+                            if (json.optBoolean("success")) {
+                                Toast.makeText(CriarContaActivity.this,
+                                        "Cadastro realizado com sucesso!", Toast.LENGTH_LONG).show();
+                                finish(); // Fecha tela após sucesso
+                            } else {
+                                Toast.makeText(CriarContaActivity.this,
+                                        json.optString("message", "Não foi possível concluir o cadastro."),
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        } catch (Exception e) {
+                            Toast.makeText(CriarContaActivity.this,
+                                    "Resposta inválida do servidor.", Toast.LENGTH_LONG).show();
+                        }
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(CriarContaActivity.this, "Erro ao conectar: " + error.toString(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(CriarContaActivity.this,
+                                "Falha de conexão. Tente novamente.", Toast.LENGTH_LONG).show();
                     }
                 }
         ) {
@@ -144,15 +154,14 @@ public class CriarContaActivity extends AppCompatActivity {
         };
 
         // Envia requisição
-        RequestQueue queue = Volley.newRequestQueue(this);
-        queue.add(request);
+        VolleyQueue.add(this, request);
     }
 
     // Botão voltar (Toolbar ← )
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            finish();
             return true;
         }
         return super.onOptionsItemSelected(item);

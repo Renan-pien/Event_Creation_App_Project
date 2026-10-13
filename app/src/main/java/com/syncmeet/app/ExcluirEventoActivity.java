@@ -1,9 +1,6 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
-import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.PendingIntent;
-import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -15,11 +12,14 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+import com.syncmeet.app.utils.LembreteScheduler;
+import com.syncmeet.app.utils.SessionManager;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,12 +38,14 @@ public class ExcluirEventoActivity extends AppCompatActivity {
     private final List<Integer> idsEventos = new ArrayList<>();
     private final List<CheckBox> checkBoxes = new ArrayList<>();
 
-    private static final String BASE_URL = "http://10.0.2.2/syncmeet/";
+    private SessionManager session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.excluir_evento);
+
+        session = new SessionManager(this);
 
         backArrow = findViewById(R.id.back_arrow);
         excluirButton = findViewById(R.id.excluir_button);
@@ -64,7 +66,7 @@ public class ExcluirEventoActivity extends AppCompatActivity {
 
     private void carregarEventosDoBanco() {
 
-        String url = BASE_URL + "list_events.php";
+        String url = BuildConfig.BASE_URL + "list_events.php?usuario_id=" + session.getUserId();
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -95,7 +97,7 @@ public class ExcluirEventoActivity extends AppCompatActivity {
                             CheckBox cb = new CheckBox(this);
                             cb.setText(nome);
                             cb.setTextSize(18);
-                            cb.setTextColor(getResources().getColor(android.R.color.white));
+                            cb.setTextColor(ContextCompat.getColor(this, android.R.color.white));
                             cb.setPadding(20, 25, 20, 25);
 
                             containerEventos.addView(cb);
@@ -110,7 +112,7 @@ public class ExcluirEventoActivity extends AppCompatActivity {
                 error -> Toast.makeText(this, "Erro ao conectar ao servidor!", Toast.LENGTH_LONG).show()
         );
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 
     private List<Integer> getEventosSelecionados() {
@@ -159,65 +161,59 @@ public class ExcluirEventoActivity extends AppCompatActivity {
                 final int idEvento = idsEventos.get(i);
                 final View itemView = checkBoxes.get(i);
 
-                // 🔥 Animação leve e elegante
-                itemView.animate()
-                        .translationX(700f)
-                        .alpha(0f)
-                        .scaleX(0.7f)
-                        .scaleY(0.7f)
-                        .setDuration(350)
-                        .withEndAction(() -> {
+                // Exclui primeiro no servidor; só remove da tela (e cancela o
+                // lembrete) quando o servidor confirmar a exclusão.
+                excluirNoBanco(idEvento, () -> {
+                    LembreteScheduler.cancelar(this, idEvento);
 
-                            containerEventos.removeView(itemView);
-                            checkBoxes.remove(index);
-                            idsEventos.remove(index);
-
-                            cancelarNotificacao(idEvento);
-                            excluirNoBanco(idEvento);
-                        })
-                        .start();
+                    itemView.animate()
+                            .translationX(700f)
+                            .alpha(0f)
+                            .scaleX(0.7f)
+                            .scaleY(0.7f)
+                            .setDuration(350)
+                            .withEndAction(() -> {
+                                containerEventos.removeView(itemView);
+                                checkBoxes.remove(index);
+                                idsEventos.remove(index);
+                            })
+                            .start();
+                });
             }
         }
 
         if (algumExcluido) {
-            Toast.makeText(this, "Eventos excluídos!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Excluindo eventos...", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void cancelarNotificacao(int idEvento) {
-        Intent intent = new Intent(this, EventoLembreteReceiver.class);
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                idEvento,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
-        if (alarmManager != null) {
-            alarmManager.cancel(pendingIntent);
-        }
-    }
-
-    private void excluirNoBanco(int idEvento) {
-
-        String url = BASE_URL + "delete_event.php";
+    private void excluirNoBanco(int idEvento, Runnable aposSucesso) {
 
         StringRequest request = new StringRequest(
                 Request.Method.POST,
-                url,
-                response -> {},
+                BuildConfig.BASE_URL + "delete_event.php",
+                response -> {
+                    try {
+                        if (new JSONObject(response).optBoolean("success")) {
+                            aposSucesso.run();
+                        } else {
+                            Toast.makeText(this, "Falha ao excluir ID " + idEvento, Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Resposta inválida do servidor", Toast.LENGTH_SHORT).show();
+                    }
+                },
                 error -> Toast.makeText(this, "Falha ao excluir ID " + idEvento, Toast.LENGTH_SHORT).show()
         ) {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> map = new HashMap<>();
                 map.put("id", String.valueOf(idEvento));
+                map.put("usuario_id", String.valueOf(session.getUserId()));
                 return map;
             }
         };
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 }

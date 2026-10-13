@@ -11,4 +11,6 @@
     <string name="confirmar_senha">Confirmar senha</string>
     <string name="cadastrar">Cadastrar</string>
     <string name="logo_do_aplicativo_syncmeet">Logo do aplicativo SyncMeet</string>
+    <string name="sair">Sair</string>
+    <string name="excluir_conta">Excluir conta</string>
 </resources>

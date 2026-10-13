@@ -1,0 +1,55 @@
+PACOTE DE DEPLOY — SyncMeet na InfinityFree (syncmeet.freedev.app)
+====================================================================
+
+Este pacote já contém as credenciais do seu servidor MySQL:
+  Host: sql304.infinityfree.com
+  Usuário: if0_43106594
+  Banco: if0_43106594_syncmeet
+
+DESTINO DE CADA ARQUIVO (dentro do File Manager da InfinityFree):
+
+  ESTE ARQUIVO                          -> NÃO SUBIR (fica no PC)
+  database_infinityfree.sql             -> NÃO SUBIR (importar no phpMyAdmin)
+  index.php                             -> /htdocs/index.php
+  .htaccess                             -> /htdocs/.htaccess        (subir por ÚLTIMO, após o SSL)
+  syncmeet/conexao.php                  -> /htdocs/syncmeet/conexao.php   (trocar a senha antes)
+  syncmeet/login.php                    -> /htdocs/syncmeet/login.php
+  syncmeet/register.php                 -> /htdocs/syncmeet/register.php
+  syncmeet/create_event.php             -> /htdocs/syncmeet/create_event.php
+  syncmeet/list_events.php              -> /htdocs/syncmeet/list_events.php
+  syncmeet/get_event.php                -> /htdocs/syncmeet/get_event.php
+  syncmeet/update_event.php             -> /htdocs/syncmeet/update_event.php
+  syncmeet/delete_event.php             -> /htdocs/syncmeet/delete_event.php
+  syncmeet/delete_account.php           -> /htdocs/syncmeet/delete_account.php
+
+ESTRUTURA FINAL NO SERVIDOR:
+
+  /htdocs
+  ├── .htaccess
+  ├── index.php
+  └── syncmeet/
+      ├── conexao.php
+      ├── login.php
+      ├── register.php
+      ├── create_event.php
+      ├── list_events.php
+      ├── get_event.php
+      ├── update_event.php
+      ├── delete_event.php
+      └── delete_account.php
+
+ÚNICO AJUSTE NECESSÁRIO NOS ARQUIVOS:
+  Em syncmeet/conexao.php, trocar SUA_SENHA_MYSQL_AQUI pela senha do
+  banco (definida quando você criou o banco no painel).
+
+ORDEM RESUMIDA (detalhes no DEPLOY.md do projeto):
+  1. phpMyAdmin: importar database_infinityfree.sql no banco
+     if0_43106594_syncmeet
+  2. File Manager: subir index.php e a pasta syncmeet/ dentro de htdocs
+     (editar conexao.php e colocar a senha)
+  3. Client Area: Free SSL Certificates -> instalar para
+     syncmeet.freedev.app (aguardar algumas horas se necessário)
+  4. Confirmar https://syncmeet.freedev.app/ abrindo com cadeado
+     ("SyncMeet API online / Banco conectado (OK)")
+  5. Subir o .htaccess para /htdocs (ativa o redirect HTTPS)
+  6. Testar os endpoints (curl ou direto no app)

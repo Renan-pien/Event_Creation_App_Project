@@ -1,4 +1,4 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import org.junit.Test;
 

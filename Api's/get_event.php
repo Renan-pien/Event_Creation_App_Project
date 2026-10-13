@@ -1,11 +1,11 @@
 <?php
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 require_once "conexao.php";
 
-
 $id = $_GET["id"] ?? null;
+$usuario_id = $_GET["usuario_id"] ?? null;
 
-if (!$id || !is_numeric($id)) {
+if (!$id || !is_numeric($id) || !$usuario_id || !is_numeric($usuario_id)) {
     echo json_encode([
         "success" => false,
         "message" => "ID inválido ou ausente"
@@ -13,29 +13,16 @@ if (!$id || !is_numeric($id)) {
     exit;
 }
 
-// Consulta
-$sql = "
+// Só retorna o evento se ele pertencer ao usuário informado
+$stmt = $con->prepare("
     SELECT id, nome_evento, local_evento, data_evento, hora_evento
     FROM eventos
-    WHERE id = ?
-";
-
-$stmt = $con->prepare($sql);
-
-if (!$stmt) {
-    echo json_encode([
-        "success" => false,
-        "message" => "Erro no prepare",
-        "erro" => $con->error
-    ]);
-    exit;
-}
-
-$stmt->bind_param("i", $id);
+    WHERE id = ? AND usuario_id = ?
+");
+$stmt->bind_param("ii", $id, $usuario_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Se não existir evento
 if ($result->num_rows === 0) {
     echo json_encode([
         "success" => false,

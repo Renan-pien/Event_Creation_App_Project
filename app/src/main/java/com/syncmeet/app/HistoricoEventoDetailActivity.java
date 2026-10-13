@@ -1,17 +1,17 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Intent;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
+import com.syncmeet.app.utils.SessionManager;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -21,13 +21,18 @@ public class HistoricoEventoDetailActivity extends AppCompatActivity {
     private ImageView backArrow;
     private TextView nomeEvento, local, data, horarioInicio, horarioTermino;
 
-    private static final String BASE_URL = "http://10.0.2.2/syncmeet/get_event.php";
+    private SessionManager session;
+
     private int idEvento = -1;
+
+    private static final String TAG = "HistoricoDetail";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.historico_evento_detail);
+
+        session = new SessionManager(this);
 
         backArrow = findViewById(R.id.back_arrow);
         nomeEvento = findViewById(R.id.detalhe_nome_evento);
@@ -52,7 +57,8 @@ public class HistoricoEventoDetailActivity extends AppCompatActivity {
 
     private void carregarDetalhes() {
 
-        String url = BASE_URL + "?id=" + idEvento;
+        String url = BuildConfig.BASE_URL + "get_event.php?id=" + idEvento
+                + "&usuario_id=" + session.getUserId();
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -80,10 +86,10 @@ public class HistoricoEventoDetailActivity extends AppCompatActivity {
                         horarioInicio.setText(evento.getString("hora_evento"));
 
                         // Como só existe 1 horário no banco, repito:
-                        horarioTermino.setText("--:--"); // Se quiser, deixe vazio
+                        horarioTermino.setText("--:--");
 
                     } catch (JSONException e) {
-                        Log.e("HISTORICO_DETAIL", "Erro ao processar JSON", e);
+                        Log.e(TAG, "Erro ao processar JSON", e);
                         Toast.makeText(this, "Erro ao ler dados!", Toast.LENGTH_SHORT).show();
                     }
                 },
@@ -93,6 +99,6 @@ public class HistoricoEventoDetailActivity extends AppCompatActivity {
                 }
         );
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 }

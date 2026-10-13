@@ -1,4 +1,4 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
@@ -10,9 +10,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.volley.Request;
-import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+import com.syncmeet.app.utils.LembreteScheduler;
+import com.syncmeet.app.utils.SessionManager;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import org.json.JSONObject;
 
@@ -33,12 +34,14 @@ public class CriarEventoActivity extends AppCompatActivity {
     private Calendar dataSelecionada = Calendar.getInstance();
     private Calendar horaSelecionada = Calendar.getInstance();
 
-    private static final String URL = "http://10.0.2.2/syncmeet/create_event.php";
+    private SessionManager session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.criar_evento);
+
+        session = new SessionManager(this);
 
         nomeEventoEditText = findViewById(R.id.nome_evento);
         localEventoEditText = findViewById(R.id.local_evento);
@@ -106,7 +109,6 @@ public class CriarEventoActivity extends AppCompatActivity {
         horaEventoEditText.setText(sdf.format(horaSelecionada.getTime()));
     }
 
-    // ✔ VALIDAÇÃO 100% CORRETA
     private void validarEEnviar() {
         String nome = nomeEventoEditText.getText().toString().trim();
         String local = localEventoEditText.getText().toString().trim();
@@ -142,6 +144,10 @@ public class CriarEventoActivity extends AppCompatActivity {
             return;
         }
 
+        // Lembrete por notificação: no Android 13+ exige permissão em runtime,
+        // pedida no momento em que o usuário cria o evento com lembrete.
+        LembreteScheduler.pedirPermissaoNotificacao(this);
+
         enviarEvento(nome, local, data, hora);
     }
 
@@ -149,7 +155,7 @@ public class CriarEventoActivity extends AppCompatActivity {
 
         StringRequest request = new StringRequest(
                 Request.Method.POST,
-                URL,
+                BuildConfig.BASE_URL + "create_event.php",
                 response -> {
                     try {
                         JSONObject obj = new JSONObject(response);
@@ -157,7 +163,15 @@ public class CriarEventoActivity extends AppCompatActivity {
                         String message = obj.optString("message");
 
                         Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                        if (success) finish();
+
+                        if (success) {
+                            // Agenda o lembrete (40 min antes) já na CRIAÇÃO do evento
+                            int idEvento = obj.optInt("id", -1);
+                            if (idEvento > 0) {
+                                LembreteScheduler.agendar(this, idEvento, nome, data, hora);
+                            }
+                            finish();
+                        }
 
                     } catch (Exception e) {
                         Toast.makeText(this,
@@ -165,12 +179,12 @@ public class CriarEventoActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                     }
                 },
-                error -> Toast.makeText(this, error.toString(), Toast.LENGTH_LONG).show()
+                error -> Toast.makeText(this, "Falha de conexão. Tente novamente.", Toast.LENGTH_LONG).show()
         ) {
             @Override
             protected Map<String, String> getParams() {
                 Map<String, String> params = new HashMap<>();
-                params.put("usuario_id", "1");
+                params.put("usuario_id", String.valueOf(session.getUserId()));
                 params.put("nome", nome);
                 params.put("local", local);
                 params.put("data", data);
@@ -179,6 +193,6 @@ public class CriarEventoActivity extends AppCompatActivity {
             }
         };
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 }

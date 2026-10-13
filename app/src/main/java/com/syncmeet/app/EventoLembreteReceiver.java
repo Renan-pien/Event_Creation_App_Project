@@ -1,4 +1,4 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -9,6 +9,8 @@ import android.content.Intent;
 import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
+
+import com.syncmeet.app.utils.LembreteScheduler;
 
 public class EventoLembreteReceiver extends BroadcastReceiver {
 
@@ -32,6 +34,12 @@ public class EventoLembreteReceiver extends BroadcastReceiver {
             return; // evita crash
         }
 
+        // Android 13+ (API 33): sem POST_NOTIFICATIONS concedida pelo usuário,
+        // a notificação não pode ser exibida — encerra sem erro.
+        if (!LembreteScheduler.temPermissaoNotificacao(context)) {
+            return;
+        }
+
         criarCanal(context);
 
         // Intent ao tocar na notificação (abrir tela de detalhes)
@@ -49,16 +57,8 @@ public class EventoLembreteReceiver extends BroadcastReceiver {
         String titulo = "Reunião em 40 minutos";
         String texto = nome + " às " + hora + " (" + data + ")";
 
-        // Garante que exista um ícone
-        int icone = R.drawable.ic_notification;
-        try {
-            context.getResources().getResourceName(icone);
-        } catch (Exception e) {
-            icone = android.R.drawable.ic_dialog_info; // fallback
-        }
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(icone)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(titulo)
                 .setContentText(texto)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(

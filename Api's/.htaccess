@@ -1,0 +1,29 @@
+# ======================================================================
+# Segurança da pasta da API (para o SERVIDOR de produção)
+# Funciona em Apache 2.4 (cPanel e maioria das hospedagens compartilhadas)
+# ======================================================================
+
+# Proíbe listagem do conteúdo da pasta (sem index.php, o Apache listaria
+# todos os arquivos)
+Options -Indexes
+
+# Bloqueia acesso direto pelo navegador ao script de conexão
+# (o include() do PHP não passa pelo Apache, então a API continua
+# funcionando normalmente)
+<Files "conexao.php">
+    Require all denied
+</Files>
+
+# Não serve backups, SQL, logs nem documentação da pasta
+<FilesMatch "\.(sql|md|log|ini|bak|old|swp)$">
+    Require all denied
+</FilesMatch>
+
+# ----------------------------------------------------------------------
+# FORÇAR HTTPS: descomente as 3 linhas abaixo DEPOIS que o certificado
+# SSL estiver ativo no painel da hospedagem (com HTTPS off ainda, deixar
+# isso ativo causa loop de redirecionamento).
+# ----------------------------------------------------------------------
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

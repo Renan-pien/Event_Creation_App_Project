@@ -1,0 +1,40 @@
+# ======================================================================
+# SyncMeet — configuração Apache (vai na RAIZ do htdocs)
+# Vale para a raiz e para a pasta /syncmeet/ automaticamente.
+# ======================================================================
+
+# Proíbe listagem do conteúdo das pastas
+# (se o site der erro 500 após ativar, comente a linha abaixo —
+#  algumas configurações de servidor restringem a diretiva Options)
+Options -Indexes
+
+# ----------------------------------------------------------------------
+# FORÇAR HTTPS em todo o site ( HTTP -> https:// )
+# Mantenha este bloco ativo SOMENTE depois que o certificado SSL
+# gratuito estiver instalado (Passo 4 do guia).
+# ----------------------------------------------------------------------
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ----------------------------------------------------------------------
+# Proteção dos arquivos da API
+# ----------------------------------------------------------------------
+
+# Bloqueia acesso direto pelo navegador ao script de conexão
+# (o include() do PHP não passa pelo Apache, então a API continua
+# funcionando normalmente)
+<Files "conexao.php">
+    Require all denied
+</Files>
+
+# Não serve SQL, backups, logs, documentação nem pacotes zip
+<FilesMatch "\.(sql|md|txt|log|ini|bak|old|swp|zip)$">
+    Require all denied
+</FilesMatch>
+
+# ----------------------------------------------------------------------
+# "Rotas": nenhuma regra de reescrita é necessária — cada endpoint da
+# API é um arquivo .php real acessado direto
+# (https://syncmeet.freedev.app/syncmeet/login.php etc.).
+# ----------------------------------------------------------------------

@@ -15,9 +15,25 @@
         android:drawablePadding="16dp"
         android:gravity="center_vertical"
         android:layout_gravity="center_horizontal"
-        android:text="Sair"
+        android:text="@string/sair"
         android:textColor="#FF0000"
         app:drawableStartCompat="@drawable/ic_sair"
         app:drawableTint="#FF0000" />
+
+    <TextView
+        android:id="@+id/nav_footer_excluir_conta"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:drawablePadding="16dp"
+        android:gravity="center_vertical"
+        android:layout_gravity="center_horizontal"
+        android:text="@string/excluir_conta"
+        android:textColor="#A0A0A0"
+        android:textSize="12sp"
+        app:drawableStartCompat="@drawable/ic_delete"
+        app:drawableTint="#A0A0A0" />
 
 </LinearLayout>

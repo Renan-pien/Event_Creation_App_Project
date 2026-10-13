@@ -1,4 +1,4 @@
-package com.example.syncmeet;
+package com.syncmeet.app;
 
 import android.os.Bundle;
 import android.widget.ImageView;
@@ -6,11 +6,13 @@ import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.android.volley.Request;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.android.material.button.MaterialButton;
+import com.syncmeet.app.utils.SessionManager;
+import com.syncmeet.app.utils.VolleyQueue;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -20,15 +22,17 @@ public class AgendaEventoActivity extends AppCompatActivity {
     private ImageView backArrow;
     private LinearLayout containerAgenda;
 
-    private static final String BASE_URL = "http://10.0.2.2/syncmeet/";
+    private SessionManager session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.agenda_evento);
 
+        session = new SessionManager(this);
+
         backArrow = findViewById(R.id.back_arrow);
-        containerAgenda = findViewById(R.id.container_agenda); // certifique-se que existe no XML
+        containerAgenda = findViewById(R.id.container_agenda);
 
         backArrow.setOnClickListener(v -> finish());
 
@@ -37,7 +41,7 @@ public class AgendaEventoActivity extends AppCompatActivity {
 
     private void carregarAgendaDoDia() {
 
-        String url = BASE_URL + "list_events.php";
+        String url = BuildConfig.BASE_URL + "list_events.php?usuario_id=" + session.getUserId();
 
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.GET,
@@ -78,7 +82,7 @@ public class AgendaEventoActivity extends AppCompatActivity {
                 error -> Toast.makeText(this, "Falha ao carregar agenda.", Toast.LENGTH_LONG).show()
         );
 
-        Volley.newRequestQueue(this).add(request);
+        VolleyQueue.add(this, request);
     }
 
     private void adicionarItemAgenda(int id, String nome, String data, String hora) {
@@ -93,8 +97,8 @@ public class AgendaEventoActivity extends AppCompatActivity {
         item.setClickable(false);
 
         // estilização
-        item.setTextColor(getResources().getColor(android.R.color.white));
-        item.setBackgroundTintList(getResources().getColorStateList(R.color.purple_syncmeet));
+        item.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+        item.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.purple_syncmeet));
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

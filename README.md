@@ -1,107 +1,58 @@
-Event Creation App – SyncMeet
+# Event Creation App – SyncMeet
 
-Aplicativo Android desenvolvido para criação, edição, listagem e exclusão de eventos.
-O projeto utiliza PHP + MySQL como backend e faz requisições HTTP pelo app para gerenciamento dos dados.
+Aplicativo Android para criação, edição, listagem e exclusão de eventos, com
+login de usuário e lembrete por notificação (40 minutos antes do evento).
+O backend é PHP + MySQL.
 
-📌 Funcionalidades
+## 📌 Funcionalidades
 
-Criar eventos com:
+- Criar conta / login (e-mail + senha com hash no servidor)
+- "Lembrar de mim" (guarda apenas o e-mail — a senha nunca fica no aparelho)
+- Criar eventos: nome, local, data e horário
+- Lembrete por notificação 40 min antes (criação e edição)
+- Listar, editar e excluir eventos (por usuário)
+- Histórico e agenda de eventos
+- Exclusão de conta (remove usuário e eventos)
 
-Nome do evento
+## 🛠️ Tecnologias
 
-Local
+**Android (Java)**
+- Volley (requisições HTTP) com fila única (`VolleyQueue`)
+- URL base centralizada em `BuildConfig.BASE_URL`
+- minSdk 24 / targetSdk 36
 
-Data
+**Backend (PHP + MySQL)** em `Api's/`
+- `login.php`, `register.php`, `create_event.php`, `list_events.php`,
+  `get_event.php`, `update_event.php`, `delete_event.php`, `delete_account.php`
+- Queries preparadas (sem SQL injection)
+- Cada usuário só acessa os próprios eventos (`usuario_id`)
 
-Horário de início
+## Como rodar em desenvolvimento
 
-Horário de término
+1. Copie a pasta `Api's/` para `htdocs/syncmeet/` no XAMPP e crie o banco
+   `syncmeet` (tabelas `usuarios` e `eventos`).
+2. Rode o app em **debug** — a URL `http://10.0.2.2/syncmeet/` (emulador)
+   já está configurada no `buildTypes.debug`. HTTP só é permitido em debug.
+3. Em um celular físico, troque `10.0.2.2` pelo IP do seu PC no
+   `app/build.gradle.kts` (buildType `debug`).
 
-Listar todos os eventos cadastrados
+## Como gerar o AAB de produção
 
-Editar eventos existentes
+1. Coloque o backend em HTTPS seguindo o **`DEPLOY.md`** (hospedagem +
+   SSL Let's Encrypt + passo a passo completo). A `BASE_URL` de release
+   já aponta para `https://syncmeet.freedev.app/syncmeet/`.
+2. Gere a keystore:
+   `keytool -genkeypair -v -keystore syncmeet-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias syncmeet`
+3. Crie `keystore.properties` na raiz (fora do git) com storeFile,
+   storePassword, keyAlias e keyPassword.
+4. `./gradlew clean bundleRelease`
+   → `app/build/outputs/bundle/release/app-release.aab`
 
-Excluir eventos
+## ⚠️ Nota sobre permissões
 
-Interface adaptada com telas dedicadas para:
-
-Login
-
-Tela principal
-
-Detalhes do evento
-
-Edição do evento
-
-🛠️ Tecnologias Utilizadas
-Frontend (Android)
-
-Java
-
-Android Studio
-
-Volley (HTTP Requests)
-
-ConstraintLayout
-
-RecyclerView
-
-Backend (PHP)
-
-APIs em PHP para:
-
-Login
-
-Listar eventos
-
-Criar eventos
-
-Editar eventos
-
-Excluir eventos
-
-Banco de dados MySQL
-
-  Estrutura básica do projeto:
-
-/app – código fonte Android
-
-/php_api – scripts PHP (login, listar, criar, editar e excluir)
-
-/res/layout – telas XML do aplicativo
-
-MyApplication.java – classe que centraliza a URL base da API
-
-Como rodar o projeto??
-
-1. Configurar API (PHP)
-
-Copie as pastas da API para htdocs/ no XAMPP
-
-Crie o banco de dados no MySQL
-
-Ajuste o arquivo conexao.php com seu usuário, senha e host
-
-2. Configurar Android
-
-Edite MyApplication.java
-
-Configure o IP local do seu servidor PHP, exemplo:
-
-public static final String BASE_URL = "http://10.0.0.2/syncmeet/";
-
-3. Executar
-
-Inicie o Apache e MySQL no XAMPP
-
-Conecte o celular na mesma rede do PC
-
-Compile o app no Android Studio
-
- Objetivo:
-
-Este projeto foi criado para demonstrar uma solução simples e funcional para gerenciamento de eventos utilizando comunicação cliente-servidor via APIs.
-
-Contato:
-
-Caso queira contribuir ou tirar dúvidas, fique à vontade para abrir uma issue.
+`REQUEST_INSTALL_PACKAGES` (solicitada em fase anterior do projeto) foi
+**removida** do Manifest para atender à política da Google Play — o app
+não possui função de instalação de APKs. Se um dia for distribuir ou
+atualizar o app por APK fora da loja, basta reinseri-la com uma linha
+`<uses-permission>`, mas builds com ela **não** devem ser enviados à
+Play Store.

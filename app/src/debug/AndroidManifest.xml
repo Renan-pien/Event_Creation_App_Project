@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overlay de DEBUG: libera HTTP (cleartext) apenas no build de debug,
+     usado com o emulador (10.0.2.2 -> XAMPP local). O build de release
+     fica restrito a HTTPS. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>
